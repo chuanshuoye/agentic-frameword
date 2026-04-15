@@ -18,7 +18,9 @@
     "start:example": "npm run start -w @agentic/example",
     "docs:dev": "npm run dev -w @agentic/docs",
     "docs:build": "npm run build -w @agentic/docs",
-    "docs:preview": "npm run preview -w @agentic/docs"
+    "docs:build:gh-pages": "npm run build:gh-pages -w @agentic/docs",
+    "docs:preview": "npm run preview -w @agentic/docs",
+    "docs:preview:gh-pages": "npm run preview:gh-pages -w @agentic/docs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

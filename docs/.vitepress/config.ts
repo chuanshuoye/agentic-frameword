@@ -1,6 +1,17 @@
 import { defineConfig } from "vitepress";
 
+const ghPagesBase = process.env.VITEPRESS_BASE?.trim();
+let base = "/";
+if (ghPagesBase && ghPagesBase !== "/") {
+  if (ghPagesBase.endsWith("/")) {
+    base = ghPagesBase;
+  } else {
+    base = `${ghPagesBase}/`;
+  }
+}
+
 export default defineConfig({
+  base,
   title: "Agentic Framework",
   description: "面向 agent 执行观测的 TypeScript monorepo 文档",
   lang: "zh-CN",
