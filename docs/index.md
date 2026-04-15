@@ -20,4 +20,6 @@ features:
     details: Hono + SQLite 持久化；ingest、Run 查询与时间线、SSE 推送。
   - title: UI
     details: Vite + React 查看 Run 与时间线；支持单 agent 与多 agent（runId + agentId）。
+  - title: Harness Skill
+    details: Plan 从 Run 观测提炼 userGoal（内置 skillAgents），Generate 仅按 userGoal 产出 bundles；技能库治理、演进优化与人工反馈。详见 Harness Skill 生成文档。
 ---
