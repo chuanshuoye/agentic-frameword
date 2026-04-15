@@ -1,4 +1,4 @@
-# Agentic Framework（一期）
+# Agentic Framework
 
 面向 **agent 执行观测** 的 TypeScript monorepo：执行侧通过 **jsbridge** 批量上报 CLI / LLM / meta 快照，**API Server** 落库（SQLite），**UI** 查看 Run 与时间线；支持单 agent 与多 agent（`runId` + `agentId`）。
 
