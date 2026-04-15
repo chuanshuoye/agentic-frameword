@@ -29,6 +29,7 @@ export default defineConfig({
         items: [
           { text: "概述", link: "/guide/overview" },
           { text: "架构", link: "/guide/architecture" },
+          { text: "数据库结构", link: "/guide/database-schema" },
           { text: "快速开始", link: "/guide/getting-started" },
           { text: "示例应用（example）", link: "/guide/example-app" },
           { text: "jsbridge 接入", link: "/guide/jsbridge-integration" },
