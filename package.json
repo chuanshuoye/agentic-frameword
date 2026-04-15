@@ -1,0 +1,30 @@
+{
+  "name": "agentic-framework",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "docs"
+  ],
+  "scripts": {
+    "build": "npm run build -w @agentic/shared && npm run build -w @agentic/skill-agents && npm run build -w @agentic/jsbridge && npm run build -w @agentic/server && npm run build -w @agentic/ui",
+    "typecheck": "npm run typecheck -w @agentic/shared && npm run build -w @agentic/shared && npm run typecheck -w @agentic/skill-agents && npm run build -w @agentic/skill-agents && npm run typecheck -w @agentic/server && npm run typecheck -w @agentic/jsbridge && npm run typecheck -w @agentic/ui && npm run typecheck -w @agentic/example",
+    "lint": "eslint packages apps --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:server": "npm run dev -w @agentic/server",
+    "dev:ui": "npm run dev -w @agentic/ui",
+    "start:example": "npm run start -w @agentic/example",
+    "docs:dev": "npm run dev -w @agentic/docs",
+    "docs:build": "npm run build -w @agentic/docs",
+    "docs:preview": "npm run preview -w @agentic/docs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.8"
+  }
+}
