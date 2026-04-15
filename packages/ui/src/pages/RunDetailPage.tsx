@@ -1,7 +1,6 @@
-import JSZip from "jszip";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { SkillBundle, SkillFileTreeNode, SkillFormat, SkillGenerateResponse } from "@agentic/shared";
+import type { SkillBundle, SkillFormat, SkillGenerateResponse } from "@agentic/shared";
 import {
   apiBase,
   fetchEvents,
@@ -11,6 +10,7 @@ import {
   saveSkillRecords,
   type StoredEvent,
 } from "../api.js";
+import { downloadSkillBundlesZip } from "../utils/downloadSkillBundles.js";
 
 function PayloadBlock({ payload }: { payload: Record<string, unknown> }) {
   const [open, setOpen] = useState(false);
@@ -48,29 +48,6 @@ export function RunDetailPage() {
   const [skillSaveErr, setSkillSaveErr] = useState<string | null>(null);
   const [skillSaveIds, setSkillSaveIds] = useState<number[] | null>(null);
   const [skillFormat, setSkillFormat] = useState<SkillFormat>("cursor");
-
-  function flattenTree(node: SkillFileTreeNode, basePath: string, out: { path: string; content: string }[]): void {
-    const nextPath = basePath ? `${basePath}/${node.name}` : node.name;
-    if (node.type === "file") {
-      out.push({ path: nextPath, content: node.content ?? "" });
-      return;
-    }
-    for (const child of node.children ?? []) {
-      flattenTree(child, nextPath, out);
-    }
-  }
-
-  function bundleFiles(bundle: SkillBundle): { path: string; content: string }[] {
-    if (bundle.files && bundle.files.length > 0) {
-      return bundle.files;
-    }
-    if (!bundle.fileTree) {
-      return [];
-    }
-    const files: { path: string; content: string }[] = [];
-    flattenTree(bundle.fileTree, "", files);
-    return files;
-  }
 
   const agentOptions = useMemo(() => {
     const s = new Set<string>();
@@ -127,30 +104,15 @@ export function RunDetailPage() {
     bundles: SkillBundle[],
     runIdForName: string,
   ) {
-    const zip = new JSZip();
-    for (const b of bundles) {
-      const dir = `${b.format}/${b.skillId.replace(/[^\w.-]+/g, "_")}`;
-      for (const f of bundleFiles(b)) {
-        zip.file(`${dir}/${f.path}`, f.content);
-      }
-    }
-    const blob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
     const safeRun = runIdForName.replace(/[^\w.-]+/g, "_").slice(0, 24);
-    a.download = `skills-${safeRun}.zip`;
-    a.rel = "noopener";
-    a.click();
-    URL.revokeObjectURL(url);
+    await downloadSkillBundlesZip({
+      bundles,
+      zipName: `skills-${safeRun}.zip`,
+    });
   }
 
-  async function onSaveSkillLibrary() {
+  async function onSaveSkillLibrary(generated: SkillGenerateResponse) {
     setSkillSaveErr(null);
-    if (!skillLastGenerate) {
-      setSkillSaveErr("请先生成 Skill");
-      return;
-    }
     if (!hasIngestToken) {
       setSkillSaveErr("未配置鉴权 Token，无法保存");
       return;
@@ -159,8 +121,8 @@ export function RunDetailPage() {
     try {
       const res = await saveSkillRecords({
         runId,
-        bundles: skillLastGenerate.bundles,
-        generationMeta: skillLastGenerate.generationMeta,
+        bundles: generated.bundles,
+        generationMeta: generated.generationMeta,
       });
       setSkillSaveIds(res.ids);
     } catch (e) {
@@ -223,6 +185,7 @@ export function RunDetailPage() {
       setSkillLastGenerate(res);
       setSkillLastWarnings(res.warnings ?? null);
       await onDownloadSkillBundles(res.bundles, runId);
+      await onSaveSkillLibrary(res);
     } catch (e) {
       setSkillErr(e instanceof Error ? e.message : "生成失败");
     } finally {
@@ -436,18 +399,9 @@ export function RunDetailPage() {
         >
           {skillBusy ? "生成中…" : "生成并下载 zip（Generate）"}
         </button>
-        <button
-          className="ui-btn"
-          type="button"
-          style={{ marginLeft: 8 }}
-          disabled={skillSaveBusy || !skillLastGenerate || !hasIngestToken}
-          onClick={() => void onSaveSkillLibrary()}
-        >
-          {skillSaveBusy ? "保存中…" : "保存到 Skill 库"}
-        </button>
         {skillLastGenerate ? (
           <span className="ui-meta" style={{ marginLeft: 8 }}>
-            已生成，可保存或前往{" "}
+            {skillSaveBusy ? "已生成，保存中…" : "已生成并自动保存，可前往 "}
             <Link to="/skills">Skill 库</Link>
           </span>
         ) : null}

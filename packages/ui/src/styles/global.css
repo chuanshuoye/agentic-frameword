@@ -634,6 +634,30 @@ label.ui-check {
   border-color: rgba(47, 95, 79, 0.35);
 }
 
+.skill-meta-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  row-gap: 4px;
+  column-gap: 10px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  align-items: baseline;
+}
+
+.skill-meta-grid dt {
+  margin: 0;
+  color: var(--faint);
+}
+
+.skill-meta-grid dd {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 /* —— Responsive —— */
 @media (max-width: 960px) {
   .ui-split {
@@ -656,6 +680,10 @@ label.ui-check {
     border-right: none;
     border-bottom: 1px solid var(--border);
     max-height: 260px;
+  }
+
+  .skill-meta-grid {
+    grid-template-columns: 82px minmax(0, 1fr);
   }
 }
 

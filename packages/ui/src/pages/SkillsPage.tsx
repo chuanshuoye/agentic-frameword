@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiBase, fetchSkillRecords, type SkillRecordListItem } from "../api.js";
 
@@ -41,6 +41,7 @@ export function SkillsPage() {
   const [skills, setSkills] = useState<SkillRecordListItem[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
   const hasToken = Boolean(
     (import.meta.env.VITE_AGENTIC_SERVER_TOKEN as string | undefined)?.trim(),
   );
@@ -69,6 +70,20 @@ export function SkillsPage() {
     void load();
   }, [load]);
 
+  const searchKeyword = searchText.trim().toLowerCase();
+  const filteredSkills = useMemo(() => {
+    if (!searchKeyword) {
+      return skills;
+    }
+    return skills.filter((row) => {
+      const runId = row.runId ?? "";
+      return [row.skillId, row.format, row.status, runId].some((item) =>
+        item.toLowerCase().includes(searchKeyword),
+      );
+    });
+  }, [skills, searchKeyword]);
+  const groupedSkills = useMemo(() => groupSkills(filteredSkills), [filteredSkills]);
+
   return (
     <div className="ui-page">
       <p className="ui-back">
@@ -79,15 +94,35 @@ export function SkillsPage() {
         由 Run 详情页「生成 Skill」后点击「保存到 Skill 库」写入。列表与详情需 Bearer。
       </p>
       <div className="ui-toolbar-inline" style={{ marginBottom: 12 }}>
+        <input
+          className="ui-input"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          placeholder="快速搜索：skillId / format / status / runId"
+          style={{ minWidth: 320, maxWidth: 520 }}
+        />
+        {searchText ? (
+          <button className="ui-btn" type="button" onClick={() => setSearchText("")}>
+            清空
+          </button>
+        ) : null}
         <button className="ui-btn" type="button" disabled={loading || !hasToken} onClick={() => void load()}>
           {loading ? "加载中…" : "刷新"}
         </button>
       </div>
+      {!loading && !err ? (
+        <p className="ui-hint">
+          共 {skills.length} 条，匹配 {filteredSkills.length} 条
+        </p>
+      ) : null}
       {err ? <p className="ui-error">{err}</p> : null}
       {!loading && !err && skills.length === 0 ? (
         <p className="ui-hint">库中暂无记录。请先在某一 Run 中生成并保存 Skill。</p>
       ) : null}
-      {groupSkills(skills).map((group) => {
+      {!loading && !err && skills.length > 0 && filteredSkills.length === 0 ? (
+        <p className="ui-hint">未匹配到结果，请调整关键词。</p>
+      ) : null}
+      {groupedSkills.map((group) => {
         const latest = group.rows[0];
         return (
           <section key={`${group.skillId}-${group.format}`} className="ui-section" style={{ marginTop: 12 }}>

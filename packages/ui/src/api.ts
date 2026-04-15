@@ -426,7 +426,7 @@ export async function fetchSessions(params: {
   if (params.agentId) {
     q.set("agentId", params.agentId);
   }
-  q.set("limit", String(params.limit ?? 20));
+  q.set("limit", String(params.limit ?? 100));
   q.set("offset", String(params.offset ?? 0));
   const res = await fetch(`${apiBase}${apiPaths.sessions}?${q.toString()}`);
   if (!res.ok) {

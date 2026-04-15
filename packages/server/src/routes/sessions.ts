@@ -29,7 +29,7 @@ export function registerSessionRoutes(
   opts: SessionsRouteOpts,
 ): void {
   app.get(apiPaths.sessions, async (c) => {
-    const limit = Math.min(Number(c.req.query("limit") ?? "20") || 20, 100);
+    const limit = Math.min(Number(c.req.query("limit") ?? "100") || 100, 100);
     const offset = Math.max(Number(c.req.query("offset") ?? "0") || 0, 0);
     const q = (c.req.query("q") ?? "").trim();
     const projectKey = (c.req.query("projectKey") ?? "").trim();

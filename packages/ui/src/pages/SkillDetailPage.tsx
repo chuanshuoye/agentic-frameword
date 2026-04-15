@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import type { SkillBundle } from "@agentic/shared";
 import { apiBase, fetchSkillRecord, type SkillRecordDetail } from "../api.js";
+import { downloadSkillBundlesZip } from "../utils/downloadSkillBundles.js";
 
 type SkillFileNode = {
   name: string;
@@ -101,6 +103,27 @@ export function SkillDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
 
+  async function onDownloadFilesZip(): Promise<void> {
+    if (!skill || !skill.files || skill.files.length === 0) {
+      return;
+    }
+    const bundle: SkillBundle = {
+      format: skill.format,
+      skillId: skill.skillId,
+      layout: "files",
+      files: skill.files.map((f) => ({ path: f.path, content: f.content })),
+    };
+    const safeSkillId = skill.skillId.replace(/[^\w.-]+/g, "_").slice(0, 40) || `skill-${skill.id}`;
+    try {
+      await downloadSkillBundlesZip({
+        bundles: [bundle],
+        zipName: `skill-${safeSkillId}-v${skill.version}.zip`,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "文件下载失败");
+    }
+  }
+
   useEffect(() => {
     if (!Number.isFinite(id) || id < 1) {
       setError("无效的 Skill id");
@@ -169,21 +192,21 @@ export function SkillDetailPage() {
         {loading ? <p className="ui-meta">加载中…</p> : null}
         {error ? <p className="ui-error">{error}</p> : null}
         {skill ? (
-          <dl className="ui-meta" style={{ display: "grid", gap: 6 }}>
+          <dl className="skill-meta-grid">
             <dt>格式</dt>
-            <dd style={{ margin: 0 }}>{skill.format}</dd>
+            <dd>{skill.format}</dd>
             <dt>技能 ID</dt>
-            <dd style={{ margin: 0, wordBreak: "break-all" }}>{skill.skillId}</dd>
+            <dd style={{ wordBreak: "break-all" }}>{skill.skillId}</dd>
             <dt>版本</dt>
-            <dd style={{ margin: 0 }}>v{skill.version}</dd>
+            <dd>v{skill.version}</dd>
             <dt>状态</dt>
-            <dd style={{ margin: 0 }}>{skill.status}</dd>
+            <dd>{skill.status}</dd>
             <dt>创建时间</dt>
-            <dd style={{ margin: 0 }}>{skill.createdAt}</dd>
+            <dd>{skill.createdAt}</dd>
             {skill.runId ? (
               <>
                 <dt>运行 ID</dt>
-                <dd style={{ margin: 0, wordBreak: "break-all" }}>
+                <dd style={{ wordBreak: "break-all" }}>
                   <Link to={`/runs/${encodeURIComponent(skill.runId)}`}>{skill.runId}</Link>
                 </dd>
               </>
@@ -194,7 +217,17 @@ export function SkillDetailPage() {
 
       {skill?.files?.length ? (
         <section className="ui-section" style={{ marginTop: 16 }}>
-          <h3>文件</h3>
+          <div className="ui-toolbar-inline" style={{ marginBottom: 8 }}>
+            <h3 style={{ margin: 0 }}>文件</h3>
+            <button
+              className="ui-btn"
+              type="button"
+              onClick={() => void onDownloadFilesZip()}
+              disabled={!skill || !skill.files || skill.files.length === 0}
+            >
+              下载 zip
+            </button>
+          </div>
           <div className="skill-file-browser">
             <aside className="skill-file-sidebar">
               {renderSkillTreeNodes(fileTree, selectedFile?.path ?? null, setSelectedFilePath)}
