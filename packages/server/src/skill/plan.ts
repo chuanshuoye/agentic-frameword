@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 import type { SkillPlanRequest } from "@agentic/shared";
-import { DEFAULT_SKILL_PLAN_AGENT_ID, getSkillAgent } from "@agentic/skill-agents";
+import { DEFAULT_SKILL_PLAN_AGENT_ID, getSkillPlanAgent } from "@agentic/skill-agents";
 import { SkillGenerateError } from "./errors.js";
 import { skillPlanLlmApiKeyFromEnv, skillPlanLlmBaseUrl, skillPlanLlmModel, skillLlmApiKeyFromEnv, skillLlmModel } from "./env.js";
 import { buildInputWarnings, buildRunObservationPackage } from "./runContext.js";
@@ -52,7 +52,7 @@ export async function planSkillUserGoalFromRun(
   }
 
   const agentId = req.agentId ?? DEFAULT_SKILL_PLAN_AGENT_ID;
-  const agent = getSkillAgent(agentId);
+  const agent = getSkillPlanAgent(agentId);
   if (!agent) {
     throw new SkillGenerateError(400, "unknown_plan_agent", `不支持的 agentId: ${agentId}`);
   }

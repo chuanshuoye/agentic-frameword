@@ -51,6 +51,17 @@ export {
   type SkillPlanRequest,
 } from "./skillPlan.js";
 export {
+  harnessReviewRequestSchema,
+  harnessFailureCaseSchema,
+  harnessReviewLlmOutputSchema,
+  harnessReviewResponseSchema,
+  parseHarnessReviewLlmJson,
+  type HarnessReviewRequest,
+  type HarnessFailureCase,
+  type HarnessReviewLlmOutput,
+  type HarnessReviewResponse,
+} from "./harnessReview.js";
+export {
   distillStrategySchema,
   factualityModeSchema,
   distillConfigSchema,

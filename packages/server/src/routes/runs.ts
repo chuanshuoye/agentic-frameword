@@ -1,7 +1,7 @@
 import {
   API_PREFIX,
   apiPaths,
-  runReviewCreateBodySchema,
+  harnessReviewRequestSchema,
   skillGenerateRequestSchema,
   skillPlanRequestSchema,
 } from "@agentic/shared";
@@ -10,6 +10,7 @@ import type { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import type { AppEnv } from "../appEnv.js";
 import { generateSkillFromRun } from "../skill/generate.js";
+import { reviewRunFailures } from "../skill/harnessReview.js";
 import { planSkillUserGoalFromRun } from "../skill/plan.js";
 import { SkillGenerateError } from "../skill/errors.js";
 import { getRun, listEvents, listRuns } from "../store.js";
@@ -86,7 +87,7 @@ export function registerRunRoutes(app: Hono<AppEnv>, auth: MiddlewareHandler): v
       return c.json({ error: "invalid_runId" }, 400);
     }
     const body = await c.req.json().catch(() => ({}));
-    const parsed = runReviewCreateBodySchema.safeParse(body);
+    const parsed = harnessReviewRequestSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: "invalid_body", issues: parsed.error.flatten() }, 400);
     }
@@ -95,13 +96,16 @@ export function registerRunRoutes(app: Hono<AppEnv>, auth: MiddlewareHandler): v
     if (!run) {
       return c.json({ error: "not_found" }, 404);
     }
-    return c.json(
-      {
-        error: "not_implemented",
-        message: "复盘结构化写入尚未实现（二期占位接口）",
-      },
-      501,
-    );
+    try {
+      const result = await reviewRunFailures(dbInstance, runId, parsed.data);
+      return c.json(result);
+    } catch (e) {
+      if (e instanceof SkillGenerateError) {
+        const status = e.status as 400 | 422 | 502 | 503;
+        return c.json({ error: e.code, message: e.message }, status);
+      }
+      throw e;
+    }
   });
 
   app.get(`${API_PREFIX}/runs/:runId/events`, async (c) => {

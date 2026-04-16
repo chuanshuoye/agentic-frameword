@@ -24,12 +24,27 @@
 | `GET` | `/v1/events/stream` | SSE 事件流，必填 `runId`，可选 `sinceSeq`、`agentId` |
 | `POST` | `/v1/runs/:runId/skill/plan` | 基于 Run 事件提炼 userGoal；成功时 **响应体为纯文本**（`text/plain`），非 JSON |
 | `POST` | `/v1/runs/:runId/skill/generate` | 仅根据请求体 `userGoal` 生成 skill 草案（不读 events；路径中的 `runId` 仅兼容保留） |
-| `POST` | `/v1/runs/:runId/reviews` | Run 复盘写入占位接口（当前返回 `501 not_implemented`） |
+| `POST` | `/v1/runs/:runId/reviews` | Harness 失败复盘：输出失败案例并可幂等写入根目录 `AGENT.md` |
 
 ### Skill Plan / Generate（二步）
 
 - **`POST /v1/runs/:runId/skill/plan`**：读取该 run 的 events（支持 `agentIds`、`maxContextEvents`），调用内置 `skillGenerateAgent`（`@agentic/skill-agents`）；大模型与 HTTP 成功响应均为**纯文本**（无 JSON 包裹）。若有上下文预警，服务端会以可读前缀拼入正文。可选环境变量：`AGENTIC_SKILL_PLAN_LLM_BASE_URL`、`AGENTIC_SKILL_PLAN_LLM_API_KEY`、`AGENTIC_SKILL_PLAN_LLM_MODEL`（未设置时回退到 `AGENTIC_SKILL_LLM_*`）。失败时仍返回 JSON：`{ "error", "message" }`。
 - **`POST /v1/runs/:runId/skill/generate`**：仅使用请求体中的 `userGoal`、`formats` 等调用模型；**不查询** events 表。请求体中的 `agentIds`、`maxContextEvents` 会被忽略（兼容旧客户端）。成功响应的 `generationMeta.contextPolicy` 为 `{ "source": "user_goal_only" }`。
+
+### Harness Review / AGENT.md
+
+- **`POST /v1/runs/:runId/reviews`**：
+  - 请求体：`note?`、`agentIds?`、`maxContextEvents?`、`model?`、`apiKey?`、`mode?`（`dry_run` 或 `write_agent_md`）。
+  - 响应体：`summary`、`cases[]`、`writeResult`（含 `path/updated/inserted/merged`）。
+  - 当 `mode=write_agent_md`（默认）时，服务端会把失败案例按幂等键（`runId + failure_fingerprint`）合并写入仓库根目录 `AGENT.md`。
+
+- **`AGENT.md`（OpenAI 风格）固定结构**：
+  - `# Agent Knowledge Base`
+  - `## Scope`
+  - `## Operating Constraints`
+  - `## Failure Cases`（自动维护分区）
+  - `## Stable Playbooks`
+  - `## Changelog`
 
 ## Sessions
 

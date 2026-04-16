@@ -33,7 +33,7 @@
   --space-3: 14px;
   --space-4: 20px;
   --nav-h: 52px;
-  --content-max: min(1280px, 100%);
+  --content-max: min(1440px, 100%);
 }
 
 *,
@@ -567,6 +567,41 @@ label.ui-check {
   margin-bottom: 16px;
 }
 
+/* —— Run detail workbench —— */
+.run-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+  gap: var(--space-3);
+  align-items: start;
+  margin-bottom: var(--space-3);
+}
+
+.run-workbench-events {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  padding: var(--space-3);
+  overflow: auto;
+}
+
+.run-workbench-events h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-2);
+  font-size: 1rem;
+}
+
+.run-workbench-panels {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.run-workbench-panels .ui-section {
+  margin-bottom: 0;
+}
+
 /* —— Skill file browser —— */
 .skill-file-browser {
   display: grid;
@@ -684,6 +719,19 @@ label.ui-check {
 
   .skill-meta-grid {
     grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .run-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .run-workbench-events {
+    order: 2;
+    max-height: none;
+  }
+
+  .run-workbench-panels {
+    order: 1;
   }
 }
 

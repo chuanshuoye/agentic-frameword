@@ -24,6 +24,8 @@ import {
   type SkillReviewCreateBody,
   type SkillRollbackBody,
   type SkillRuntimeFeedbackCreateBody,
+  type HarnessReviewRequest,
+  type HarnessReviewResponse,
   type SkillGenerateRequest,
   type SkillGenerateResponse,
   type SkillPlanRequest,
@@ -107,6 +109,28 @@ export async function fetchEvents(
 }
 
 const ingestToken = (import.meta.env.VITE_AGENTIC_SERVER_TOKEN as string | undefined)?.trim() ?? "";
+
+export async function runHarnessReview(
+  runId: string,
+  body: HarnessReviewRequest,
+): Promise<HarnessReviewResponse> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
+  if (ingestToken) {
+    headers.authorization = `Bearer ${ingestToken}`;
+  }
+  const res = await fetch(`${apiBase}${apiPaths.runReviews(runId)}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`harness_review_${res.status}:${text.slice(0, 240)}`);
+  }
+  return (await res.json()) as HarnessReviewResponse;
+}
 
 export async function planSkill(runId: string, body: SkillPlanRequest): Promise<string> {
   const headers: Record<string, string> = {

@@ -19,12 +19,16 @@ export function listCursorProjects(
     }
     const fullPath = join(root, entry.name);
     const transcriptsDir = join(fullPath, "agent-transcripts");
+    const hasTranscripts = existsSync(transcriptsDir);
+    if (!hasTranscripts) {
+      continue;
+    }
     const candidate: SessionProjectCandidate = {
       provider: "cursor",
       name: entry.name,
       path: fullPath,
       transcriptsDir,
-      hasTranscripts: existsSync(transcriptsDir),
+      hasTranscripts,
     };
     if (nameQuery && !normalize(entry.name).includes(nameQuery)) {
       continue;

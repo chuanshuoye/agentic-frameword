@@ -7,6 +7,7 @@ Harness Skill 生成模块把一次 `runId` 下的观测数据（CLI、LLM、met
 - **Harness（上下文采样器）**：在 **Plan** 步围绕某个 `runId` 收集并裁剪事件上下文，为「能力描述」模型提供稳定输入。
 - **Plan**：`POST /v1/runs/:runId/skill/plan`，内置 `skillGenerateAgent`（`@agentic/skill-agents`）；成功响应为 **纯文本** userGoal 正文（无 JSON）。
 - **Generate**：`POST /v1/runs/:runId/skill/generate`，**仅**根据 `userGoal` 与范式生成结构化 `bundles`（支持 `files` / `fileTree`）；服务端 **不读取** run events，也不把观测会话送入该步模型。
+- **Harness Review**：`POST /v1/runs/:runId/reviews`，提炼失败案例并沉淀到根目录 `AGENT.md`（OpenAI 风格知识库结构，自动分区幂等更新）。
 - **Skill 生命周期**：草案写入 `/v1/skills` 后进入治理与演进流程（review/release/feedback/version）。
 
 ## Harness 架构
@@ -123,6 +124,27 @@ curl -X POST "http://127.0.0.1:8787/v1/runs/<runId>/skill/generate" \
 - 治理：`/v1/skills/:id/governance`、`/review`、`/release`
 - 演进：`/experiments`、`/evals`、`/scorecard`、`/feedback-trend`、`/rollback`
 - 反馈：`/human-feedback`、`/regenerate-from-feedback`、`/versions`
+
+## 失败复盘与知识沉淀（AGENT.md）
+
+### 复盘接口
+
+```bash
+curl -X POST "http://127.0.0.1:8787/v1/runs/<runId>/reviews" \
+  -H "Authorization: Bearer <AGENTIC_SERVER_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentIds": ["agent-a"],
+    "maxContextEvents": 100,
+    "mode": "write_agent_md"
+  }'
+```
+
+### AGENT.md 约定（OpenAI 风格）
+
+- 固定文件：仓库根目录 `AGENT.md`。
+- 固定章节：`Scope`、`Operating Constraints`、`Failure Cases`、`Stable Playbooks`、`Changelog`。
+- `Failure Cases` 由服务端自动分区维护，幂等键为 `runId + failure_fingerprint`，重复命中仅更新而不重复追加。
 
 ## 适用场景
 
