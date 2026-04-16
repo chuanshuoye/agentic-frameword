@@ -1,8 +1,9 @@
 import type { SessionProjectCandidate } from "@agentic/shared";
 import { existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { collectJsonlFiles } from "./ingest/jsonlSession.js";
 
-export function listCursorProjects(
+export function listClaudeProjects(
   projectsRoot: string,
   opts: { projectName?: string } = {},
 ): SessionProjectCandidate[] {
@@ -18,13 +19,13 @@ export function listCursorProjects(
       continue;
     }
     const fullPath = join(root, entry.name);
-    const transcriptsDir = join(fullPath, "agent-transcripts");
+    const jsonlFiles = collectJsonlFiles(fullPath);
     const candidate: SessionProjectCandidate = {
-      provider: "cursor",
+      provider: "claude",
       name: entry.name,
       path: fullPath,
-      transcriptsDir,
-      hasTranscripts: existsSync(transcriptsDir),
+      transcriptsDir: fullPath,
+      hasTranscripts: jsonlFiles.length > 0,
     };
     if (nameQuery && !normalize(entry.name).includes(nameQuery)) {
       continue;
@@ -34,11 +35,8 @@ export function listCursorProjects(
   return out.sort((a, b) => Number(b.hasTranscripts) - Number(a.hasTranscripts));
 }
 
-export function resolveCursorTranscriptsDir(
-  projectsRoot: string,
-  projectName: string,
-): string | null {
-  const candidates = listCursorProjects(projectsRoot, { projectName });
+export function resolveClaudeTranscriptsDir(projectsRoot: string, projectName: string): string | null {
+  const candidates = listClaudeProjects(projectsRoot, { projectName });
   const matched = candidates.find((item) => item.hasTranscripts);
   return matched ? matched.transcriptsDir : null;
 }

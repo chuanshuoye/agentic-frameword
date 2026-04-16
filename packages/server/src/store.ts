@@ -25,7 +25,7 @@ import { normalizeBundlesToFiles } from "./skill/fileTree.js";
 
 export type { StoredEvent, SessionRow, SessionDetail } from "@agentic/shared";
 
-export type SessionSourceType = "cursor_local";
+export type SessionSourceType = "cursor_local" | "claude_local";
 
 export type ProjectRecord = {
   projectKey: string;

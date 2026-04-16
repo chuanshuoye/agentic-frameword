@@ -79,10 +79,13 @@
 | 变量 | 作用 | 默认 |
 |------|------|------|
 | `AGENTIC_LOG_DIR` | HTTP/LLM 等 API 日志目录 | 仓库根下 `logs` |
-| `AGENTIC_CURSOR_PROJECTS_ROOT` | 本机 Cursor `projects` 根路径，用于按 `projectName` 解析 transcript | `~/.cursor/projects` |
-| `AGENTIC_CURSOR_TRANSCRIPTS_DIR` | 直接指定 Cursor `agent-transcripts` 目录；设置后 Server 启动时可做一次性同步 | 未设置 |
-| `AGENTIC_CLAUDE_TRANSCRIPTS_DIR` | Claude 侧 transcripts 根（一期占位/扩展） | 未设置时用 `CLAUDE_CONFIG_DIR/projects`，否则 `~/.claude/projects` |
-| `CLAUDE_CONFIG_DIR` | 与 Claude CLI 配置目录联动，用于推导 projects 路径 | 无 |
+| `AGENTIC_CURSOR_PROJECTS_ROOT` | Cursor `projects` 根；`GET /v1/sessions/projects?provider=cursor` 与按名解析 transcripts | `~/.cursor/projects` |
+| `AGENTIC_CURSOR_TRANSCRIPTS_DIR` | 直接指定 Cursor `agent-transcripts` 目录；设置后启动时会做一次 `cursor` provider 同步 | 未设置 |
+| `AGENTIC_CLAUDE_PROJECTS_ROOT` | Claude Code 本地 `projects` 根；未设时依次尝试 `AGENTIC_CLAUDE_TRANSCRIPTS_DIR`、`CLAUDE_CONFIG_DIR/projects`、`~/.claude/projects` | 见左 |
+| `AGENTIC_CLAUDE_TRANSCRIPTS_DIR` | 覆盖 Claude 的 projects/transcripts 根；供 `POST /v1/sessions/sync`（`provider=claude`）缺省目录时使用 | 未设置 |
+| `CLAUDE_CONFIG_DIR` | 与 Claude CLI 配置目录一致时，用于推导默认 projects 路径（`${CLAUDE_CONFIG_DIR}/projects`） | 无 |
+
+`POST /v1/sessions/sync` 请求体可带 **`provider`**：`cursor`（默认）或 `claude`，并可选 `projectName`、`transcriptsDir`；未配置目录时的错误码为 `transcripts_dir_not_configured`（响应中含 `provider`）。
 
 会话同步、列表等详见 [HTTP API](./api.md) 与 [Agent 会话](./agent-sessions.md)。
 

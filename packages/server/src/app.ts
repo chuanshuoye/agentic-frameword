@@ -17,7 +17,12 @@ export type { AppEnv } from "./appEnv.js";
 export function createApp(
   db: Database.Database,
   token: string | undefined,
-  opts: { cursorTranscriptsDir?: string; cursorProjectsRoot: string },
+  opts: {
+    cursorTranscriptsDir?: string;
+    claudeTranscriptsDir?: string;
+    cursorProjectsRoot: string;
+    claudeProjectsRoot: string;
+  },
 ): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   const HTTP_ERROR_LOG_PREFIX = "[agentic-http-error]";

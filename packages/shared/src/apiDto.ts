@@ -1,4 +1,5 @@
 import type { AgenticEvent } from "./schema.js";
+import type { SessionProviderId } from "./schema.js";
 
 /** `GET /v1/runs` 列表项 */
 export type RunRow = {
@@ -36,13 +37,17 @@ export type SessionDetail = SessionRow & {
   contentText: string;
 };
 
-/** Cursor 本地项目候选 */
-export type CursorProjectCandidate = {
+/** 本地项目候选（多源统一结构） */
+export type SessionProjectCandidate = {
+  provider: SessionProviderId;
   name: string;
   path: string;
   transcriptsDir: string;
   hasTranscripts: boolean;
 };
+
+/** 历史命名，与 SessionProjectCandidate 相同 */
+export type CursorProjectCandidate = SessionProjectCandidate;
 
 /** `POST .../sessions/distill` 成功响应体 */
 export type SessionDistillResult = {

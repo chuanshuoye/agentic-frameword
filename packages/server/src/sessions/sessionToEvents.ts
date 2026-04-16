@@ -71,7 +71,11 @@ function pickConverter(
 }
 
 function getConverters(): SessionTranscriptConverter[] {
-  return [distilledConverter, cursorLocalConverter];
+  return [distilledConverter, bracketLocalConverter, bracketFallbackConverter];
+}
+
+function isBracketLocalSourceType(sourceType: string): boolean {
+  return sourceType.endsWith("_local");
 }
 
 const distilledConverter: SessionTranscriptConverter = {
@@ -110,43 +114,51 @@ const distilledConverter: SessionTranscriptConverter = {
       seq += 1;
     }
     if (events.length === 0) {
-      events.push(...cursorLocalConverter.toEvents(session, ctx));
+      events.push(...bracketSessionToEvents(session, ctx));
     }
     return events;
   },
 };
 
-const cursorLocalConverter: SessionTranscriptConverter = {
-  name: "cursor_local",
+function bracketSessionToEvents(session: SessionDetail, ctx: ConvertContext): AgenticEvent[] {
+  const parsed = parseBracketMessages(session.contentText);
+  const grouped = groupByRole(parsed);
+  const events: AgenticEvent[] = [];
+  let seq = ctx.startSeq;
+  for (const item of grouped) {
+    const kind = mapRoleKind(item.role);
+    events.push({
+      runId: ctx.runId,
+      agentId: session.sourceAgentId,
+      seq,
+      provider: "session-index",
+      kind,
+      ts: session.timeEnd || session.updatedAt,
+      payload: {
+        source: "session_index",
+        sessionId: session.sessionId,
+        sessionTitle: session.title,
+        role: item.role,
+        text: truncate(item.text, MAX_EVENT_TEXT),
+        rawRef: session.rawRef,
+        projectPath: session.projectPath,
+      },
+    });
+    seq += 1;
+  }
+  return events;
+}
+
+const bracketLocalConverter: SessionTranscriptConverter = {
+  name: "bracket_local",
+  canHandle: (session) => isBracketLocalSourceType(session.sourceType),
+  toEvents: (session, ctx) => bracketSessionToEvents(session, ctx),
+};
+
+const bracketFallbackConverter: SessionTranscriptConverter = {
+  name: "bracket_fallback",
   canHandle: () => true,
-  toEvents: (session, ctx) => {
-    const parsed = parseBracketMessages(session.contentText);
-    const grouped = groupByRole(parsed);
-    const events: AgenticEvent[] = [];
-    let seq = ctx.startSeq;
-    for (const item of grouped) {
-      const kind = mapRoleKind(item.role);
-      events.push({
-        runId: ctx.runId,
-        agentId: session.sourceAgentId,
-        seq,
-        provider: "session-index",
-        kind,
-        ts: session.timeEnd || session.updatedAt,
-        payload: {
-          source: "session_index",
-          sessionId: session.sessionId,
-          sessionTitle: session.title,
-          role: item.role,
-          text: truncate(item.text, MAX_EVENT_TEXT),
-          rawRef: session.rawRef,
-          projectPath: session.projectPath,
-        },
-      });
-      seq += 1;
-    }
-    return events;
-  },
+  toEvents: (session, ctx) => bracketSessionToEvents(session, ctx),
 };
 
 function parseBracketMessages(content: string): ParsedMessage[] {

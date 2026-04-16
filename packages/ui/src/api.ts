@@ -2,6 +2,8 @@ import {
   API_PREFIX,
   apiPaths,
   type CursorProjectCandidate,
+  type SessionProjectCandidate,
+  type SessionProviderId,
   type RunRow,
   type SessionDetail,
   type SessionDistillRequest,
@@ -42,6 +44,8 @@ export type {
   SessionRow,
   SessionDetail,
   CursorProjectCandidate,
+  SessionProjectCandidate,
+  SessionProviderId,
   SessionDistillResult,
 } from "@agentic/shared";
 
@@ -446,6 +450,7 @@ export async function fetchSessionDetail(id: number): Promise<SessionDetail> {
 }
 
 export async function syncSessions(params: {
+  provider?: SessionProviderId;
   projectName?: string;
   transcriptsDir?: string;
 } = {}): Promise<{
@@ -454,7 +459,9 @@ export async function syncSessions(params: {
   updated: number;
   skipped: number;
 }> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
   if (ingestToken) {
     headers.authorization = `Bearer ${ingestToken}`;
   }
@@ -475,18 +482,25 @@ export async function syncSessions(params: {
   };
 }
 
-export async function fetchCursorProjects(projectName?: string): Promise<CursorProjectCandidate[]> {
+export async function fetchSessionProjects(
+  provider: SessionProviderId,
+  projectName?: string,
+): Promise<SessionProjectCandidate[]> {
   const q = new URLSearchParams();
+  q.set("provider", provider);
   if (projectName?.trim()) {
     q.set("projectName", projectName.trim());
   }
-  const suffix = q.toString() ? `?${q.toString()}` : "";
-  const res = await fetch(`${apiBase}${apiPaths.sessionsCursorProjects}${suffix}`);
+  const res = await fetch(`${apiBase}${apiPaths.sessionsProjects}?${q.toString()}`);
   if (!res.ok) {
-    throw new Error(`cursor_projects_${res.status}`);
+    throw new Error(`session_projects_${res.status}`);
   }
-  const data = (await res.json()) as { projects: CursorProjectCandidate[] };
+  const data = (await res.json()) as { projects: SessionProjectCandidate[] };
   return data.projects;
+}
+
+export async function fetchCursorProjects(projectName?: string): Promise<CursorProjectCandidate[]> {
+  return fetchSessionProjects("cursor", projectName);
 }
 
 export async function distillSessions(body: SessionDistillRequestBody): Promise<SessionDistillResult> {

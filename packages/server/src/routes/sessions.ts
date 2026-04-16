@@ -2,13 +2,14 @@ import {
   API_PREFIX,
   apiPaths,
   sessionDistillRequestSchema,
+  sessionProviderIdSchema,
+  sessionsSyncBodySchema,
   sessionsSyncToRunsBodySchema,
 } from "@agentic/shared";
 import type { MiddlewareHandler } from "hono";
 import type { Hono } from "hono";
 import type { AppEnv } from "../appEnv.js";
-import { listCursorProjects, resolveCursorTranscriptsDir } from "../sessions/cursorProjects.js";
-import { syncCursorTranscripts } from "../sessions/cursorTranscripts.js";
+import { createSessionIngestRegistry } from "../sessions/ingest/registry.js";
 import { buildDistillFileName, distillSessionsToJsonl } from "../sessions/sessionDistill.js";
 import { buildSessionSyncRunId, convertSessionsToEvents } from "../sessions/sessionToEvents.js";
 import {
@@ -20,7 +21,9 @@ import {
 
 export type SessionsRouteOpts = {
   cursorTranscriptsDir?: string;
+  claudeTranscriptsDir?: string;
   cursorProjectsRoot: string;
+  claudeProjectsRoot: string;
 };
 
 export function registerSessionRoutes(
@@ -28,6 +31,11 @@ export function registerSessionRoutes(
   auth: MiddlewareHandler,
   opts: SessionsRouteOpts,
 ): void {
+  const registry = createSessionIngestRegistry({
+    cursorProjectsRoot: opts.cursorProjectsRoot,
+    claudeProjectsRoot: opts.claudeProjectsRoot,
+  });
+
   app.get(apiPaths.sessions, async (c) => {
     const limit = Math.min(Number(c.req.query("limit") ?? "100") || 100, 100);
     const offset = Math.max(Number(c.req.query("offset") ?? "0") || 0, 0);
@@ -46,25 +54,40 @@ export function registerSessionRoutes(
 
   app.post(apiPaths.sessionsSync, auth, async (c) => {
     const body = await c.req.json().catch(() => ({}));
-    const input = (body ?? {}) as { projectName?: string; transcriptsDir?: string };
-    const projectName = (input.projectName ?? "").trim();
-    const overrideDir = (input.transcriptsDir ?? "").trim();
-    let targetDir = overrideDir || opts.cursorTranscriptsDir;
-    if (!targetDir && projectName) {
-      targetDir = resolveCursorTranscriptsDir(opts.cursorProjectsRoot, projectName) ?? undefined;
+    const parsed = sessionsSyncBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "invalid_body", issues: parsed.error.flatten() }, 400);
+    }
+    const { provider, projectName, transcriptsDir } = parsed.data;
+    const ingest = registry.get(provider);
+    const pname = (projectName ?? "").trim();
+    const overrideDir = (transcriptsDir ?? "").trim();
+    let targetDir = overrideDir;
+    if (!targetDir) {
+      if (provider === "cursor") {
+        targetDir = opts.cursorTranscriptsDir ?? "";
+      } else {
+        targetDir = opts.claudeTranscriptsDir ?? "";
+      }
+    }
+    targetDir = targetDir.trim();
+    if (!targetDir && pname) {
+      targetDir = ingest.resolveTranscriptsDir(pname) ?? "";
     }
     if (!targetDir) {
       return c.json(
         {
-          error: "cursor_transcripts_dir_not_configured",
-          message: "请配置 AGENTIC_CURSOR_TRANSCRIPTS_DIR，或在请求体传 projectName/transcriptsDir",
+          error: "transcripts_dir_not_configured",
+          provider,
+          message:
+            "请传 transcriptsDir、配置对应 provider 的环境变量覆盖目录，或传 projectName 在 projects 根目录下匹配",
         },
         400,
       );
     }
     try {
-      const result = syncCursorTranscripts(c.get("db"), targetDir);
-      return c.json({ ok: true, targetDir, ...result });
+      const result = ingest.sync(c.get("db"), targetDir);
+      return c.json({ ok: true, provider, targetDir, ...result });
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown_error";
       return c.json({ error: "sync_failed", message }, 500);
@@ -143,11 +166,21 @@ export function registerSessionRoutes(
     return c.json({ ok: true, ...result });
   });
 
+  app.get(apiPaths.sessionsProjects, async (c) => {
+    const rawProvider = (c.req.query("provider") ?? "cursor").trim();
+    const parsedProvider = sessionProviderIdSchema.safeParse(rawProvider);
+    if (!parsedProvider.success) {
+      return c.json({ error: "invalid_provider" }, 400);
+    }
+    const ingest = registry.get(parsedProvider.data);
+    const projectName = (c.req.query("projectName") ?? "").trim();
+    const projects = ingest.listProjects({ projectName: projectName || undefined });
+    return c.json({ projects });
+  });
+
   app.get(apiPaths.sessionsCursorProjects, async (c) => {
     const projectName = (c.req.query("projectName") ?? "").trim();
-    const projects = listCursorProjects(opts.cursorProjectsRoot, {
-      projectName: projectName || undefined,
-    });
+    const projects = registry.get("cursor").listProjects({ projectName: projectName || undefined });
     return c.json({ projects });
   });
 

@@ -17,6 +17,7 @@ export const apiPaths = {
   sessionsBatchDelete: `${API_PREFIX}/sessions/batch-delete`,
   sessionsDistill: `${API_PREFIX}/sessions/distill`,
   sessionsSyncToRuns: `${API_PREFIX}/sessions/sync-to-runs`,
+  sessionsProjects: `${API_PREFIX}/sessions/projects`,
   sessionsCursorProjects: `${API_PREFIX}/sessions/cursor-projects`,
   skills: `${API_PREFIX}/skills`,
   skill: (id: string | number) =>

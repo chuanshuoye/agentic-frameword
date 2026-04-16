@@ -4,12 +4,13 @@ import {
   apiBase,
   deleteSessions,
   distillSessions,
-  fetchCursorProjects,
+  fetchSessionProjects,
   fetchSessions,
   syncSessionsToRuns,
   syncSessions,
-  type CursorProjectCandidate,
   type SessionDistillResult,
+  type SessionProjectCandidate,
+  type SessionProviderId,
   type SessionRow,
 } from "../api.js";
 
@@ -20,9 +21,10 @@ export function SessionsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [sessionProvider, setSessionProvider] = useState<SessionProviderId>("cursor");
   const [projectName, setProjectName] = useState("");
-  const [cursorProjects, setCursorProjects] = useState<CursorProjectCandidate[]>([]);
-  const [cursorProjectDir, setCursorProjectDir] = useState("");
+  const [sessionProjects, setSessionProjects] = useState<SessionProjectCandidate[]>([]);
+  const [sessionProjectDir, setSessionProjectDir] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const [distillSourceFiles, setDistillSourceFiles] = useState("");
   const [distillOutputDir, setDistillOutputDir] = useState("");
@@ -60,17 +62,32 @@ export function SessionsPage() {
 
   useEffect(() => {
     void load();
-    void refreshCursorProjects("");
   }, []);
 
-  async function refreshCursorProjects(name: string) {
+  useEffect(() => {
+    void refreshSessionProjects(sessionProvider, projectName.trim(), true);
+  }, [sessionProvider]);
+
+  async function refreshSessionProjects(
+    provider: SessionProviderId,
+    name: string,
+    resetSelection: boolean,
+  ) {
     try {
-      const rows = await fetchCursorProjects(name || undefined);
-      setCursorProjects(rows);
-      if (!cursorProjectDir && rows.length > 0) {
+      const rows = await fetchSessionProjects(provider, name || undefined);
+      setSessionProjects(rows);
+      if (resetSelection) {
         const firstWithTranscripts = rows.find((item) => item.hasTranscripts);
-        setCursorProjectDir((firstWithTranscripts ?? rows[0]).transcriptsDir);
+        setSessionProjectDir((firstWithTranscripts ?? rows[0])?.transcriptsDir ?? "");
+        return;
       }
+      setSessionProjectDir((prev) => {
+        if (prev && rows.some((item) => item.transcriptsDir === prev)) {
+          return prev;
+        }
+        const firstWithTranscripts = rows.find((item) => item.hasTranscripts);
+        return (firstWithTranscripts ?? rows[0])?.transcriptsDir ?? "";
+      });
     } catch {
       // ignore
     }
@@ -81,8 +98,9 @@ export function SessionsPage() {
     setSyncMsg(null);
     try {
       const result = await syncSessions({
+        provider: sessionProvider,
         projectName: projectName.trim() || undefined,
-        transcriptsDir: cursorProjectDir.trim() || undefined,
+        transcriptsDir: sessionProjectDir.trim() || undefined,
       });
       setSyncMsg(
         `同步完成：扫描 ${result.scannedFiles}，新增 ${result.inserted}，更新 ${result.updated}，跳过 ${result.skipped}`,
@@ -155,7 +173,7 @@ export function SessionsPage() {
   }
 
   async function onDistill() {
-    if (!cursorProjectDir.trim()) {
+    if (!sessionProjectDir.trim()) {
       setDistillMsg("请先选择 transcripts 目录");
       return;
     }
@@ -172,7 +190,7 @@ export function SessionsPage() {
     setDistillResult(null);
     try {
       const result = await distillSessions({
-        transcriptsDir: cursorProjectDir.trim(),
+        transcriptsDir: sessionProjectDir.trim(),
         sourceFiles,
         outputDir: distillOutputDir.trim() || undefined,
         title: distillTitle.trim() || undefined,
@@ -354,24 +372,47 @@ export function SessionsPage() {
 
         <div className="ui-card ui-stack">
           <div className="ui-stack--sm">
-            <p className="ui-section-title">Cursor 项目定位</p>
+            <p className="ui-section-title">本地会话源与项目</p>
             <div className="ui-stack--sm">
+              <label className="ui-toolbar-row" style={{ gap: 8, alignItems: "center" }}>
+                <span className="ui-muted">Provider</span>
+                <select
+                  className="ui-select"
+                  value={sessionProvider}
+                  onChange={(e) => setSessionProvider(e.target.value as SessionProviderId)}
+                >
+                  <option value="cursor">Cursor</option>
+                  <option value="claude">Claude Code</option>
+                </select>
+              </label>
               <input
                 className="ui-input"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Cursor projectName（用于匹配目录）"
+                placeholder={
+                  sessionProvider === "cursor"
+                    ? "projectName（匹配 Cursor projects 目录名）"
+                    : "projectName（匹配 Claude ~/.claude/projects 子目录）"
+                }
               />
               <div className="ui-toolbar-row">
-                <button className="ui-btn" type="button" onClick={() => void refreshCursorProjects(projectName.trim())}>
-                  查询 Cursor projects
+                <button
+                  className="ui-btn"
+                  type="button"
+                  onClick={() => void refreshSessionProjects(sessionProvider, projectName.trim(), false)}
+                >
+                  查询 projects
                 </button>
               </div>
-              <select className="ui-select" value={cursorProjectDir} onChange={(e) => setCursorProjectDir(e.target.value)}>
-                <option value="">未选择目录（将按 projectName 匹配）</option>
-                {cursorProjects.map((item) => (
+              <select
+                className="ui-select"
+                value={sessionProjectDir}
+                onChange={(e) => setSessionProjectDir(e.target.value)}
+              >
+                <option value="">未选择目录（将按 projectName / 环境变量解析）</option>
+                {sessionProjects.map((item) => (
                   <option key={item.path} value={item.transcriptsDir}>
-                    {item.name} {item.hasTranscripts ? "" : "(无 agent-transcripts)"}
+                    {item.name} {!item.hasTranscripts ? "(无 transcripts)" : ""}
                   </option>
                 ))}
               </select>

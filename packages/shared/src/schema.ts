@@ -26,6 +26,14 @@ export const ingestBatchBodySchema = z.object({
   events: z.array(agenticEventSchema).min(1).max(500),
 });
 
+export const sessionProviderIdSchema = z.enum(["cursor", "claude"]);
+
+export const sessionsSyncBodySchema = z.object({
+  provider: sessionProviderIdSchema.default("cursor"),
+  projectName: z.string().optional(),
+  transcriptsDir: z.string().optional(),
+});
+
 export const sessionsSyncToRunsBodySchema = z.object({
   sessionIds: z.array(z.number().int().positive()).min(1).max(200),
   granularity: z.enum(["section"]).default("section"),
@@ -43,5 +51,7 @@ export const sessionsSyncToRunsResponseSchema = z.object({
 export type AgenticEvent = z.infer<typeof agenticEventSchema>;
 export type IngestBatchBody = z.infer<typeof ingestBatchBodySchema>;
 export type EventKind = z.infer<typeof eventKindSchema>;
+export type SessionProviderId = z.infer<typeof sessionProviderIdSchema>;
+export type SessionsSyncBody = z.infer<typeof sessionsSyncBodySchema>;
 export type SessionsSyncToRunsBody = z.infer<typeof sessionsSyncToRunsBodySchema>;
 export type SessionsSyncToRunsResponse = z.infer<typeof sessionsSyncToRunsResponseSchema>;

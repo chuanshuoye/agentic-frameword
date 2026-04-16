@@ -1,6 +1,8 @@
 export {
   agenticEventSchema,
   ingestBatchBodySchema,
+  sessionProviderIdSchema,
+  sessionsSyncBodySchema,
   sessionsSyncToRunsBodySchema,
   sessionsSyncToRunsResponseSchema,
   eventKindSchema,
@@ -8,6 +10,8 @@ export {
   type AgenticPayloadTrace,
   type IngestBatchBody,
   type EventKind,
+  type SessionProviderId,
+  type SessionsSyncBody,
   type SessionsSyncToRunsBody,
   type SessionsSyncToRunsResponse,
 } from "./schema.js";
@@ -154,6 +158,7 @@ export type {
   StoredEvent,
   SessionRow,
   SessionDetail,
+  SessionProjectCandidate,
   CursorProjectCandidate,
   SessionDistillResult,
 } from "./apiDto.js";
